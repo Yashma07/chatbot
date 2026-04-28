@@ -1,26 +1,116 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useRef, useEffect, useState } from "react";
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
+  createdAt?: Date;
 }
 
-interface ChatLayoutProps {
-  messages: Message[];
-  input: string;
-  setInput: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isLoading: boolean;
+function useChat() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+      createdAt: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '',
+        createdAt: new Date()
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const textMatch = chunk.match(/0:"([^"]*)"/);
+          if (textMatch) {
+            const text = textMatch[1];
+            assistantContent += text;
+            
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessage.id 
+                ? { ...msg, content: assistantContent }
+                : msg
+            ));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        createdAt: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading
+  };
 }
 
-export function ChatLayout({ messages, input, setInput, onSubmit, isLoading }: ChatLayoutProps) {
+export function ChatLayout() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,7 +171,7 @@ export function ChatLayout({ messages, input, setInput, onSubmit, isLoading }: C
             </motion.div>
           ) : (
             <AnimatePresence>
-              {messages.map((message, index) => (
+              {messages.map((message: Message, index: number) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -89,13 +179,20 @@ export function ChatLayout({ messages, input, setInput, onSubmit, isLoading }: C
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
                   transition={{ 
                     duration: 0.3, 
-                    delay: index * 0.1,
+                    delay: index * 0.05,
                     type: "spring",
                     stiffness: 300
                   }}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
+                  <motion.div
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 400, 
+                      damping: 25 
+                    }}
                     className={`max-w-xs md:max-w-md lg:max-w-xl px-6 py-4 rounded-3xl shadow-xl ${
                       message.role === 'user'
                         ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 text-white border-0'
@@ -106,9 +203,9 @@ export function ChatLayout({ messages, input, setInput, onSubmit, isLoading }: C
                     <p className={`text-xs mt-2 ${
                       message.role === 'user' ? 'text-white/70' : 'text-gray-400'
                     }`}>
-                      {message.timestamp.toLocaleTimeString()}
+                      {message.createdAt?.toLocaleTimeString() || new Date().toLocaleTimeString()}
                     </p>
-                  </div>
+                  </motion.div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -157,16 +254,16 @@ export function ChatLayout({ messages, input, setInput, onSubmit, isLoading }: C
         transition={{ duration: 0.5, delay: 0.2 }}
         className="mx-4 mb-4"
       >
-        <form onSubmit={onSubmit} className="relative">
+        <form onSubmit={handleSubmit} className="relative">
           <div className="relative group">
             {/* Glassmorphism pill container */}
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl group-hover:shadow-purple-500/25 transition-all duration-300" />
             
-            {/* Input field */}
+            {/* Input field connected to useChat hook */}
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Type your message..."
               className="relative w-full bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-6 py-4 pr-24 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300"
               disabled={isLoading}
