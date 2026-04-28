@@ -1,111 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt?: Date;
-}
-
-function useChat() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-      createdAt: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = '';
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '',
-        createdAt: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const textMatch = chunk.match(/0:"([^"]*)"/);
-          if (textMatch) {
-            const text = textMatch[1];
-            assistantContent += text;
-            
-            setMessages(prev => prev.map(msg => 
-              msg.id === assistantMessage.id 
-                ? { ...msg, content: assistantContent }
-                : msg
-            ));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        createdAt: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading
-  };
-}
+import { useRef, useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
 
 export function ChatLayout() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -166,26 +63,28 @@ export function ChatLayout() {
               >
                 <span className="text-3xl">🤖</span>
               </motion.div>
-              <h2 className="text-3xl font-bold text-white mb-3">Hello! I'm your AI Assistant</h2>
+              <h2 className="text-3xl font-bold text-white mb-3">Hello! I&apos;m your AI Assistant</h2>
               <p className="text-gray-300 text-lg">How can I help you today?</p>
             </motion.div>
           ) : (
-            <AnimatePresence>
-              {messages.map((message: Message, index: number) => (
+            <AnimatePresence mode="popLayout">
+              {messages.map((message, index) => (
                 <motion.div
                   key={message.id}
+                  layout
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
                   transition={{ 
                     duration: 0.3, 
-                    delay: index * 0.05,
+                    delay: index * 0.02,
                     type: "spring",
                     stiffness: 300
                   }}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <motion.div
+                    layout
                     initial={{ scale: 0.8 }}
                     animate={{ scale: 1 }}
                     transition={{ 
@@ -298,3 +197,4 @@ export function ChatLayout() {
     </div>
   );
 }
+

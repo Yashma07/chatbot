@@ -1,6 +1,7 @@
 "use client";
 
 import { MeshGradient } from "@/components/mesh-gradient";
+import { ChatLayout } from "@/components/chat-layout";
 
 export default function Home() {
   return (
@@ -14,13 +15,12 @@ export default function Home() {
       <div style={{ 
         position: 'relative', 
         zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%'
+        height: '100%',
+        padding: '1rem'
       }}>
-        <h1 style={{ color: 'white', fontSize: '48px' }}>Test with MeshGradient</h1>
+        <ChatLayout />
       </div>
     </div>
   );
 }
+
