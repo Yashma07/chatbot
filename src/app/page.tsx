@@ -19,8 +19,7 @@ function useChat() {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInput(newValue);
+    setInput(e.target.value);
   };
 
   const handleFocus = () => setIsFocused(true);
@@ -56,9 +55,7 @@ function useChat() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(`Failed to send message: ${response.status}`);
+        throw new Error('Failed to send message');
       }
 
       const reader = response.body?.getReader();
@@ -80,9 +77,8 @@ function useChat() {
           if (done) break;
 
           const chunk = decoder.decode(value);
-          console.log('Received chunk:', chunk);
           
-          // Parse the new AI SDK v6 streaming format
+          // Parse the streaming format
           const lines = chunk.split('\n');
           for (const line of lines) {
             if (line.startsWith('0:')) {
@@ -97,7 +93,17 @@ function useChat() {
                   ));
                 }
               } catch (parseError) {
-                console.error('Error parsing chunk:', parseError);
+                // Try old format
+                const textMatch = line.match(/0:"([^"]*)"/);
+                if (textMatch) {
+                  const text = textMatch[1];
+                  assistantContent += text;
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessage.id 
+                      ? { ...msg, content: assistantContent }
+                      : msg
+                  ));
+                }
               }
             }
           }
@@ -340,9 +346,9 @@ export default function Home() {
                   {/* Send Button */}
                   <button
                     type="submit"
-                    disabled={!input.trim() || isLoading}
+                    disabled={isLoading || input.trim() === ''}
                     className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-semibold transition-all duration-300 text-xs sm:text-sm ${
-                      !input.trim() || isLoading
+                      isLoading || input.trim() === ''
                         ? "bg-white/20 text-white/50 cursor-not-allowed"
                         : "bg-white text-gray-900 hover:bg-white/90"
                     }`}
