@@ -19,7 +19,9 @@ function useChat() {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    const newValue = e.target.value;
+    console.log('Input changed:', newValue);
+    setInput(newValue);
   };
 
   const handleFocus = () => setIsFocused(true);
@@ -347,6 +349,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={isLoading || input.trim() === ''}
+                    onClick={() => console.log('Button clicked', { isLoading, input, inputTrimmed: input.trim(), disabled: isLoading || input.trim() === '' })}
                     className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-semibold transition-all duration-300 text-xs sm:text-sm ${
                       isLoading || input.trim() === ''
                         ? "bg-white/20 text-white/50 cursor-not-allowed"
