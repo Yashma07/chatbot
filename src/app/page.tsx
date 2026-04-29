@@ -3,6 +3,7 @@
 import { MeshGradient } from "@/components/mesh-gradient";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useRef, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface Message {
   id: string;
@@ -15,10 +16,15 @@ function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    const newValue = e.target.value;
+    setInput(newValue);
   };
+
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = () => setIsFocused(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,14 +122,17 @@ function useChat() {
     input,
     handleInputChange,
     handleSubmit,
-    isLoading
+    isLoading,
+    isFocused,
+    handleFocus,
+    handleBlur
   };
 }
 
 export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, isFocused, handleFocus, handleBlur } = useChat();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -210,35 +219,141 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Input Area */}
+          {/* Input Area - Apple Siri Style */}
           <div className="mx-2 sm:mx-4 mb-2 sm:mb-4">
             <form onSubmit={handleSubmit} className="relative">
-              <div className="relative group">
-                {/* Glassmorphism pill container */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl group-hover:shadow-purple-500/25 transition-all duration-300" />
-                
-                {/* Input field connected to useChat hook */}
-                <input
-                  type="text"
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Type your message..."
-                  className="relative w-full bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 sm:px-6 py-3 sm:py-4 pr-20 sm:pr-24 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
-                  disabled={isLoading}
+              <div className="relative">
+                {/* Animated Glow Background */}
+                <motion.div
+                  className="absolute inset-0 rounded-full"
+                  animate={{
+                    background: [
+                      "linear-gradient(135deg, rgba(236, 72, 153, 1), rgba(168, 85, 247, 1), rgba(59, 130, 246, 1))",
+                      "linear-gradient(135deg, rgba(168, 85, 247, 1), rgba(59, 130, 246, 1), rgba(236, 72, 153, 1))",
+                      "linear-gradient(135deg, rgba(59, 130, 246, 1), rgba(236, 72, 153, 1), rgba(168, 85, 247, 1))",
+                      "linear-gradient(135deg, rgba(236, 72, 153, 1), rgba(168, 85, 247, 1), rgba(59, 130, 246, 1))"
+                    ],
+                    scale: isFocused ? 1.05 : 1.02,
+                  }}
+                  transition={{
+                    background: {
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "linear"
+                    },
+                    scale: {
+                      duration: 0.2,
+                      ease: "easeOut"
+                    }
+                  }}
+                  style={{
+                    filter: "blur(35px)",
+                    opacity: 0.9
+                  }}
                 />
                 
-                {/* Send Button */}
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-300 text-xs sm:text-sm"
+                {/* Secondary Glow Layer */}
+                <motion.div
+                  className="absolute inset-0 rounded-full"
+                  animate={{
+                    background: [
+                      "radial-gradient(circle at 20% 50%, rgba(236, 72, 153, 0.9), transparent 40%)",
+                      "radial-gradient(circle at 80% 50%, rgba(168, 85, 247, 0.9), transparent 40%)",
+                      "radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.9), transparent 40%)",
+                      "radial-gradient(circle at 20% 50%, rgba(236, 72, 153, 0.9), transparent 40%)"
+                    ],
+                    scale: isFocused ? 1.08 : 1.03,
+                  }}
+                  transition={{
+                    background: {
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "linear"
+                    },
+                    scale: {
+                      duration: 0.2,
+                      ease: "easeOut"
+                    }
+                  }}
+                  style={{
+                    filter: "blur(45px)",
+                    opacity: 0.8
+                  }}
+                />
+                
+                {/* Tertiary Glow Layer */}
+                <motion.div
+                  className="absolute inset-0 rounded-full"
+                  animate={{
+                    background: [
+                      "radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.7), transparent 60%)",
+                      "radial-gradient(circle at 30% 70%, rgba(168, 85, 247, 0.7), transparent 60%)",
+                      "radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.7), transparent 60%)",
+                      "radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.7), transparent 60%)"
+                    ],
+                    scale: isFocused ? 1.06 : 1.01,
+                  }}
+                  transition={{
+                    background: {
+                      duration: 5,
+                      repeat: Infinity,
+                      ease: "linear"
+                    },
+                    scale: {
+                      duration: 0.2,
+                      ease: "easeOut"
+                    }
+                  }}
+                  style={{
+                    filter: "blur(60px)",
+                    opacity: 0.7
+                  }}
+                />
+                
+                {/* Glassmorphism Input Field */}
+                <div
+                  className={`relative rounded-full border transition-all duration-300 ${
+                    isFocused 
+                      ? "border-white/40 bg-white/10 backdrop-blur-md" 
+                      : "border-white/20 bg-white/5 backdrop-blur-sm"
+                  }`}
+                  style={{
+                    boxShadow: isFocused 
+                      ? "0 0 60px rgba(236, 72, 153, 0.6), 0 0 80px rgba(168, 85, 247, 0.5), 0 0 100px rgba(59, 130, 246, 0.4), 0 0 120px rgba(236, 72, 153, 0.3)"
+                      : "0 0 30px rgba(236, 72, 153, 0.3), 0 0 40px rgba(168, 85, 247, 0.2), 0 0 50px rgba(59, 130, 246, 0.1)"
+                  }}
                 >
-                  {isLoading ? (
-                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <span>Send</span>
-                  )}
-                </button>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={handleInputChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    placeholder="Type your message..."
+                    className="w-full bg-transparent border-none rounded-full px-4 sm:px-6 py-3 sm:py-4 pr-20 sm:pr-24 text-white placeholder-gray-400 focus:outline-none transition-all duration-300 text-sm sm:text-base"
+                    disabled={isLoading}
+                    style={{
+                      backdropFilter: "blur(10px)"
+                    }}
+                  />
+                  
+                  {/* Send Button */}
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 font-semibold transition-all duration-300 text-xs sm:text-sm ${
+                      !input.trim() || isLoading
+                        ? "bg-white/20 text-white/50 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-white/90"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <span>Send</span>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
